@@ -66,9 +66,9 @@ def hand_mark_boxes(source_path, data_path,
 def darkflow_predict_boxes(source_path, data_path,
                           data_filename='markup_darkflow.json', log_filename='log_darkflow.txt',
                           extentions_list=['jpg','JPG','jpeg','JPEG'], read_logs=True, verbose=True,
-                          model='C:\\darkflow\\darkflow\\cfg\\yolo.cfg',
-                          weights='C:\\darkflow\\darkflow\\bin\\yolo.weights',
-                          config='C:\\darkflow\\darkflow\\cfg',
+                          model='../data/yolo_data/cfg/yolo.cfg',
+                          weights='../data/yolo_data/bin/yolo.weights',
+                          config='../data/yolo_data/cfg/',
                           summary=None,
                           gpu=0.8, threshold=0.5, num_files=None):
 # предсказывает ббоксы для коллекции изображений в папке source_path
