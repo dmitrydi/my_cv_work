@@ -1,3 +1,7 @@
 .ipynb_checkpoints/*
 */.ipynb_checkpoints/*
 */*.weights
+tpe_recognition/data/cam_1_imgs/**
+tpe_recognition/data/yolo_data/bin/*.weights
+tpe_recognition/utils/.ipynb_checkpoints/**
+tpe_recognition/utils/__pycache__/**
