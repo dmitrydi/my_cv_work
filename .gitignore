@@ -5,3 +5,12 @@ tpe_recognition/data/cam_1_imgs/**
 tpe_recognition/data/yolo_data/bin/*.weights
 tpe_recognition/utils/.ipynb_checkpoints/**
 tpe_recognition/utils/__pycache__/**
+tpe_recognition/data/train/*
+tpe_recognition/data/test/*
+tpe_recognition/**/.ipynb_checkpoints
+tpe_recognition/**/.ipynb_checkpoints/*
+tpe_recognition/bin/cnn_trainer/.ipynb_checkpoints/
+facenet/*
+tpe_recognition/data/cam_1_xml_hand/*.xml
+tpe_recognition/utils/test_build/bin/*
+plan.txt

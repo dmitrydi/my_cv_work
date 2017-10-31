@@ -155,36 +155,123 @@ def darkflow_predict_boxes(source_path, data_path,
     with open(os.path.join(data_path, data_filename), 'w') as outfile:
         json.dump(data_dict, outfile)
 
+def clean_dict_keys_from_path(in_dict):
+    return({ os.path.split(k)[-1]:v for k,v in in_dict.items() })
+
 def detection_scores(gt_markup, det_markup, iou_threshold=0.5):
 # считает precision, recall для предсказаных ббоксов по коллекции изображений
 # gt_markup - json файл с разметкой
 # det_markup - json файл с предсказаниями
 # iou_threshold - порог перекрытия предсказанного и gt-ббокса, когда детекция считается верной
     with open(gt_markup, 'r') as f:
-        gt_data = json.loads(f.read())
+        gt_data_ = json.loads(f.read())
         
     with open(det_markup, 'r') as f:
-        pred_data = json.loads(f.read())
+        pred_data_ = json.loads(f.read())
+
+    gt_data = clean_dict_keys_from_path(gt_data_)
+    pred_data = clean_dict_keys_from_path(pred_data_)
         
     common_keys = get_common_keys(gt_data, pred_data)
+
+    if len(common_keys) == 0:
+        raise ValueError('No common images in files')
     
-    FA_TOT, MD_TOT, NO_TOT, NR_TOT = 0., 0., 0., 0.
+    HITS_TOT, NO_TOT, NR_TOT = 0., 0., 0.
     
     for img_name in common_keys:
         bboxes_gt = get_boxes_from_dict(gt_data[img_name])
         bboxes_pred = get_boxes_from_dict(pred_data[img_name])
-        FA, MD = get_fa_md(bboxes_gt, bboxes_pred, iou_threshold=iou_threshold) # FalseAlarms, MissedDetections
+        hits = get_hits(bboxes_gt, bboxes_pred, iou_threshold=iou_threshold)
+        #FA, MD = get_fa_md(bboxes_gt, bboxes_pred, iou_threshold=iou_threshold) # FalseAlarms, MissedDetections
         NO = pred_data[img_name]['n_boxes'] # Number of Objects (detected)
         NR = gt_data[img_name]['n_boxes'] # Number of Objects (ground-truth)
-        FA_TOT += FA
-        MD_TOT += MD
+        #FA_TOT += FA
+        HITS_TOT += hits
         NO_TOT += NO
         NR_TOT += NR
     
-    precision = (NO_TOT-FA_TOT)/(NO_TOT)
-    recall = (NR_TOT-MD_TOT)/NR_TOT
+    precision = HITS_TOT/(NO_TOT)
+    recall = HITS_TOT/NR_TOT
         
-    return precision, recall
+    return precision, recall, HITS_TOT, NO_TOT, NR_TOT
+
+def show_rectangles(gt_markup, pred_markup, img_dir, saving_dir, roi, iou_threshold=0.5):
+    with open(gt_markup, 'r') as f:
+        gt_data_ = json.loads(f.read())
+        
+    with open(pred_markup, 'r') as f:
+        pred_data_ = json.loads(f.read())
+
+    gt_data = clean_dict_keys_from_path(gt_data_)
+    pred_data = clean_dict_keys_from_path(pred_data_)
+        
+    common_keys = get_common_keys(gt_data, pred_data)
+
+    if len(common_keys) == 0:
+        raise ValueError('No common images in files')
+    
+    for img_name in common_keys:
+        bboxes_gt = get_boxes_from_dict(gt_data[img_name])
+        bboxes_pred = get_boxes_from_dict(pred_data[img_name])
+        bboxes_gt_roi = get_boxes_in_roi(bboxes_gt, roi)
+        bboxes_pred_roi = get_boxes_in_roi(bboxes_pred, roi)
+        img = cv2.imread(os.path.join(img_dir, img_name))
+        for x1, y1, x2, y2 in bboxes_gt_roi:
+            img = cv2.rectangle(img, (x1,y1), (x2,y2), (255,0,0))
+        matched_boxes = get_matched(bboxes_gt_roi, bboxes_pred_roi, iou_threshold=iou_threshold)
+        for x1, y1, x2, y2 in bboxes_pred_roi:
+            img = cv2.rectangle(img, (x1,y1), (x2,y2), (0,0,255))
+        for x1,y1,x2,y2 in matched_boxes:
+            img = cv2.rectangle(img, (x1,y1), (x2,y2), (0,255,0))
+        cv2.imwrite(os.path.join(saving_dir,'marked_'+img_name), img)
+
+
+
+def detection_scores_in_roi(gt_markup, det_markup, roi, iou_threshold=0.5):
+    with open(gt_markup, 'r') as f:
+        gt_data_ = json.loads(f.read())
+        
+    with open(det_markup, 'r') as f:
+        pred_data_ = json.loads(f.read())
+
+    gt_data = clean_dict_keys_from_path(gt_data_)
+    pred_data = clean_dict_keys_from_path(pred_data_)
+        
+    common_keys = get_common_keys(gt_data, pred_data)
+
+    if len(common_keys) == 0:
+        raise ValueError('No common images in files')
+    
+    HITS_TOT, NO_TOT, NR_TOT = 0., 0., 0.
+    
+    for img_name in common_keys:
+        bboxes_gt = get_boxes_from_dict(gt_data[img_name])
+        bboxes_pred = get_boxes_from_dict(pred_data[img_name])
+        bboxes_gt_roi = get_boxes_in_roi(bboxes_gt, roi)
+        bboxes_pred_roi = get_boxes_in_roi(bboxes_pred, roi)
+        NO = len(bboxes_pred_roi)#pred_data[img_name]['n_boxes'] # Number of Objects (detected)
+        NR = len(bboxes_gt_roi)#gt_data[img_name]['n_boxes'] # Number of Objects (ground-truth)
+        hits = get_hits(bboxes_gt_roi, bboxes_pred_roi, iou_threshold=iou_threshold)
+        #FA, MD = get_fa_md(bboxes_gt, bboxes_pred, iou_threshold=iou_threshold) # FalseAlarms, MissedDetections
+        #FA_TOT += FA
+        HITS_TOT += hits
+        NO_TOT += NO
+        NR_TOT += NR
+    
+    precision = HITS_TOT/(NO_TOT )
+    recall = HITS_TOT/(NR_TOT)
+        
+    return precision, recall, HITS_TOT, NO_TOT, NR_TOT
+
+def box_in_roi(box, roi):
+    x1, y1, x2, y2 = box
+    x1r, y1r, x2r, y2r = roi
+    return (x1>=x1r and x2<=x2r and y1>=y1r and y2<=y2r)
+
+def get_boxes_in_roi(boxes, roi):
+    ans = [box for box in boxes if box_in_roi(box, roi)]
+    return ans
 
 def get_fa_md(gt_list, pred_list, iou_threshold=0.5):
 # ищет FalseAlarms и MissedDetections для списка ббоксов gt_list (ground-truth) и предсказаного списка боксов pred_list
@@ -201,6 +288,26 @@ def get_fa_md(gt_list, pred_list, iou_threshold=0.5):
     FA = len(pred_list)
     
     return FA, MD
+
+def get_hits(gt_list, pred_list, iou_threshold=0.5):
+    hits = 0
+    while(len(gt_list) > 0):
+        bbox = gt_list.pop()
+        closest_box = find_closest_box(bbox, pred_list, iou_threshold)
+        if closest_box != ():
+            hits += 1
+            pred_list = [ x for x in pred_list if x != closest_box ]
+    return hits
+
+def get_matched(gt_list, pred_list, iou_threshold=0.5):
+    matched = []
+    while(len(gt_list) > 0):
+        bbox = gt_list.pop()
+        closest_box = find_closest_box(bbox, pred_list, iou_threshold)
+        if closest_box != ():
+            matched.append(closest_box)
+            pred_list = [ x for x in pred_list if x != closest_box ]
+    return matched
 
 def find_closest_box(ref_box, box_list, iou_threshold):
 # ищет ближайший к ref_box bbox в списке box_list по критерию max IoU|IoU >= iou_threshold
