@@ -14,3 +14,4 @@ facenet/*
 tpe_recognition/data/cam_1_xml_hand/*.xml
 tpe_recognition/utils/test_build/bin/*
 plan.txt
+tpe_recognition/utils/summary/*
