@@ -19,9 +19,9 @@ def hand_mark_boxes(source_path, data_path,
         
     cut_files = [] #уже обработанные изображения в source_path
     if os.path.isfile(os.path.join(data_path,log_filename)):
-        with open(os.path.join(data_path,log_filename)) as f:
+        with open(os.path.join(data_path,log_filename), 'r') as f:
             content = f.readlines()
-            cut_files = [x.rstrip() for x in content]
+            cut_files = [os.path.basename(x.rstrip()) for x in content]
             
     with open(os.path.join(data_path,log_filename), 'a') as f:
         fcounter = 0
@@ -60,6 +60,102 @@ def hand_mark_boxes(source_path, data_path,
                                 
     cv2.destroyAllWindows()
     
+    with open(os.path.join(data_path, data_filename), 'w') as outfile:
+        json.dump(data_dict, outfile)
+
+def darkflow_predict_boxes_from_model(tfnet, source_path, data_path, filelist = None,
+                          data_filename='markup_darkflow.json', log_filename='log_darkflow.txt',
+                          extentions_list=['jpg','JPG','jpeg','JPEG'], read_logs=True, verbose=True,
+                          num_files=None):
+# предсказывает ббоксы для коллекции изображений в папке source_path
+# tfnet - модель darkflow, которая предсказывает ббоксы
+# сохраняет предсказания в json-файле в виде словаря
+# {'img_name': {'n_obj': N, 'bboxes': [{'topleft': [x,y], 'bottomright':[x, y]}, ...]}, ...}
+# source_path - путь к папке с коллекцией изображений
+# data_path - путь к папке, куда будут складываться результаты предсказаний
+# filelist - список файлов, которые будут обрабатываться
+# data_filename - имя файла, куда будут сохраняться предсказания
+# log_filename - имя лог-файла, куда будут писаться имена обработанных файлов
+# extentions_list - список расширений файлов, которые будут обрабатываться
+# read_logs - флаг, если True, то при повторном запуске не будут обрабатываться изображения, уже перечисленные в лог-файле
+# num_files - максимальное кол-во файлов в директории source_path, которые будут обрабатываться. Если None, то все
+# --------------
+# опции модели darknet:
+# model - путь к конфигурационному файлу иодели
+# weights - путь к весам модели
+# config - путь к cfg-директории модели
+# gpu - доля использования GPU. Если None, то расчет идет на CPU
+
+    # опции модели darknet
+    # options=dict()
+    # options['model']=model
+    # options['load']=weights
+    # if gpu is not None:
+    #     options['gpu']=gpu
+    # options['threshold']=threshold
+    # options['config']=config
+    # options['summary']=summary
+    # # загрузили модель
+    # tfnet = TFNet(options)
+    n_files=0
+    
+    # проверяем, что source_path есть
+    if not os.path.exists(source_path):
+        raise OSError('source path does not exist')
+
+    # если нет директории data_path, то создаем ее
+    if not os.path.exists(data_path):
+        os.makedirs(data_path)
+        
+    cut_files = [] #уже обработанные изображения в source_path
+    # если есть лог-файл и мы не хотим овторно обрабатывать файлы, то включаем их в список исключений
+    if os.path.isfile(os.path.join(data_path,log_filename)) and read_logs:
+        with open(os.path.join(data_path,log_filename)) as f:
+            content = f.readlines()
+            cut_files = [x.rstrip() for x in content]
+    
+    # если задан список фалов для обработки, то берем только файлы из него
+    if filelist is not None:
+        files = [x for x in os.listdir(source_path) if os.path.splitext(x)[0] in filelist]
+    else:
+        files = os.listdir(source_path)
+            
+    with open(os.path.join(data_path,log_filename), 'a') as f: # начинаем запись в log-файл
+        data_dict=dict()
+        
+        for file in files: # для всех файлов в директории
+            flag = False
+
+            for ext in extentions_list: # если файл имеет нужное расширение, flag == True
+                flag = flag or file.endswith(ext)
+
+            if (not file in cut_files) and flag:
+                n_files += 1
+                img = cv2.imread(os.path.join(source_path, file))
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # необходимо изображение RGB
+                n_obj = 0 # кол-во объектов на изображении
+                bbox_list = [] # список ббоксов на изображении
+                predicted_boxes = tfnet.return_predict(img) # предсказываем ббоксы на изображении
+                
+                if verbose:
+                    print('file {}'.format(file))
+        
+                for pred in predicted_boxes: # формирует список словарей из ббоксов
+                    if pred['label']=='person':
+                        n_obj += 1
+                        topleft=tuple([pred['topleft']['x'], pred['topleft']['y']])
+                        bottomright=tuple([pred['bottomright']['x'], pred['bottomright']['y']])
+                        bbox={'topleft': topleft, 'bottomright': bottomright}
+                        bbox_list.append(bbox)
+                    
+                f.write(file+'\n')
+                fdict={'n_boxes': n_obj, 'bboxes':bbox_list}
+                data_dict[os.path.join(source_path,file)] = fdict # словарь {'img_name': {'n_obj': N, 'bboxes': [{'topleft': [x,y], 'bottomright':[x, y]}, ...]}, ...}
+                
+            if num_files is not None:
+                if n_files > num_files:
+                    break
+                
     with open(os.path.join(data_path, data_filename), 'w') as outfile:
         json.dump(data_dict, outfile)
 
