@@ -121,6 +121,13 @@ def get_hard_positive(x_anchor, x_emb_W, tpe_predictor, labels, class_label, ran
     return x_class[ind]
 
 def get_hard_negative(x_anchor, x_emb_W, tpe_predictor, labels, class_label, random_sample_size=100):
+# возвращает hard negative пример для x_anchor - максимально близкий экземпляр из другого класса
+# x_anchor - данный экземпляр определенного класса
+# x_emb_W - остальные экземпляры, в т.ч. и своего класса
+# tpe_predictor - предиктор модели
+# labels - метки классов
+# class_label - метка класса x_anchor
+# random_sample_size - параметр случайной выборки экземпляров для сравнения с экземпляром x-anchor
     x_not_class = x_emb_W[labels!=class_label]
     indices = np.random.choice(range(x_not_class.shape[0]), size=random_sample_size, replace=False)
     x_not_class = x_not_class[indices]
@@ -140,6 +147,8 @@ def make_dev_data_and_protocol(root_path, num_images, img_h, img_w, rescale_fact
 # img_w
 # rescale_factor
 # batch_size
+# ВОЗВРАЩАЕТ
+# dev_protocol - матрица Aij = 1, если i и j из одного класса, иначе - 0
     x_data, y_data, labels = make_data_from_images(
         root_path, num_images, img_h, img_w, rescale_factor=rescale_factor, batch_size=batch_size)
     
@@ -154,22 +163,101 @@ def make_dev_data_and_protocol(root_path, num_images, img_h, img_w, rescale_fact
         
     return x_data, y_data, labels, protocol
 
+def make_protocol(labels):
+    protocol = np.matrix(np.zeros((labels.shape[0], labels.shape[0])), dtype=int)
+    for label in np.unique(labels):
+        label_mask = (labels == label)
+        label_vect = np.matrix(np.ones(label_mask.shape)*label_mask, dtype=int)
+        label_matr = label_vect.T*label_vect
+        protocol += label_matr
+    protocol = np.array(protocol, dtype=int)
+    
+    return protocol
+
+def unpack_features(npy_archive):
+# распаковка меток и фич из npy-файла
+    data = np.load(npy_archive)
+    labels = data[:,0].astype('int')
+    embs = data[:,1:].astype('float')
+    nclasses = np.unique(labels).shape[0]
+    nfeatures = embs[0].shape[0]
+    nexamples = embs.shape[0]
+    
+    return labels, embs, nclasses, nfeatures, nexamples
+
+def train_dev_split(embs, labels, factor=0.8):
+    classes = np.unique(labels)
+    all_dev_inds = np.array([], dtype=int)
+    all_train_inds = np.array([], dtype=int)
+    for klass in classes:
+        klass_indices = np.where(labels==klass)[0]
+        n_examples = klass_indices.shape[0]
+        if n_examples < 2:
+            continue
+        n_dev = max(1, int(n_examples*(1-factor)))
+        n_train = n_examples - n_dev
+        dev_inds = np.random.choice(klass_indices, n_dev, replace=False)
+        mask = np.logical_not(np.isin(klass_indices, dev_inds))
+        train_inds = np.compress(mask, klass_indices)
+        all_dev_inds = np.append(all_dev_inds, dev_inds)
+        all_train_inds = np.append(all_train_inds, train_inds)
+    train_labels = labels[all_train_inds]
+    train_embs = embs[all_train_inds]
+    dev_labels = labels[all_dev_inds]
+    dev_embs = embs[all_dev_inds]
+            
+    return train_labels, train_embs, dev_labels, dev_embs
+        
+        
+
 def train_tpe(
     tpe_model, tpe_predictor, x_embs, x_embs_dev, dev_protocol, labels,
     n_classes, nepoch, batch_size, sampling_batch_size, model_saving_path, model_saving_name):
+# обучает классификатор tpe_model, tpe_predictor на низкоразмерных признаках x_embs
+# x_embs_dev - валидационная выборка, на которой считается loss
+#
+# ПАРАМЕТРЫ:
+# tpe_model, tpe_predictor - классификатор, который обучаем. Инициализируется с помощью метода build_tpe
+# x_embs - низкоразмерные фичи изображений, полученные на выходе нейросети
+# x_embs_dev - низкоразмерные фичи development-множества
+# dev_protocol - разметка для development-множества, матрица размера [N(x_embs_dev) x N(x_embs_dev}], если i-й и j-й компоненты
+# относятся к одному классу, то dev_protocol[i,j] == 1, иначе - 0
+# labels - метки классов для x_embs
+# n_classes - кол-во классов
+# nepoch - кол-во эпох обучения
+# batch_size - размер батча
+# sampling_batch_size - количество экземпляров x_embs для поиска максимально сложных примеров при формировании батча. Введен для того,
+# чтобы не переполнять память при большом количестве экземпляров x_embs
+# model_saving_path - путь для сохранения весов tpe-модели
+# model_saving_name - имя для сохранения весов
+#
+# ВОЗВРАЩАЕТ:
+# mineer - 'minimum equal error rate' - значение метрики, когда ошибка на target-попытках равна ошибке на imposter-попытках
+# mindeer - параметр d [0,1], при котором ошибка модели на development-множестве равна mineer. Косинусное расстояние между фичами
+# изображений в пространстве tpe-модели, которое определяет принадлежность изображений к одному или разным классам
+#
+# ИСПОЛЬЗОВАНИЕ:
+# img1, img2 --> img1_emb, img2_emb = cnn(img1, img2) --> img1_emb_tpe, img2_emb_tpe = tpe_predictor.predict(img1_emb, img2_emb) -->
+# score = img1_emb_tpe @ img2_emb_tpe.T --> если score <= mindeer, то разные классы, если score > mindeer - то одинаковые
 
-    z = np.zeros((batch_size,))
+    z = np.zeros((batch_size,))     # подаются на вход оптимизатора.
+                                    #Условие "плотной границы" между положительными и негативными экземплярами a*p - a*n = 0
     mineer = 1.
     saving_name = os.path.join(model_saving_path, model_saving_name)
+    nex = x_embs.shape[0]
     for _i in range(nepoch):
         print('epoch: {}'.format(_i))
-        a, p, n = get_batch(x_embs, tpe_predictor, labels, n_classes, batch_size, random_sample_size=sampling_batch_size)
-        tpe_model.fit([a,p,n], z, batch_size=batch_size, epochs=1)
-        x_emb_dev_tpe = tpe_predictor.predict(x_embs_dev)
-        tsc, isc = get_scores(x_emb_dev_tpe, dev_protocol) # обновление scores из dev_emb2  и dev_protocol. Что такое dev_protocol?
-        eer, _, _, _, deer = calc_metrics(tsc, isc)
+        for cbatch in range(int(nex/batch_size)):
+            a, p, n = get_batch(
+                x_embs, tpe_predictor, labels, n_classes,
+                batch_size, random_sample_size=sampling_batch_size)     # получения батча низкоразмерных фич,
+                                                                        #a - anchor, p - positive, n - negative
+            tpe_model.fit([a,p,n], z, batch_size=batch_size, epochs=1)  # обучение на тройках
+            x_emb_dev_tpe = tpe_predictor.predict(x_embs_dev)   # предсказания для dev-множества
+            tsc, isc = get_scores(x_emb_dev_tpe, dev_protocol)  # target-scores, imposter-scores
+            eer, _, _, _, deer = calc_metrics(tsc, isc)         # метрики на dev-множестве
         print('EER: {:.2f}'.format(eer * 100))
-        if eer < mineer:
+        if eer < mineer:                                    # выбираем лучшую модель по параметру d (mindeer)
             mineer = eer
             mindeer = deer
             tpe_model.save_weights(saving_name)

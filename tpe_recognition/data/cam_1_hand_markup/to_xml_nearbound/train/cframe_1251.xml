@@ -1,0 +1,33 @@
+<annotation>
+  <filename>cframe_1251.jpg</filename>
+  <folder>folder_1</folder>
+  <object>
+    <bndbox>
+      <xmax>734</xmax>
+      <xmin>678</xmin>
+      <ymax>205</ymax>
+      <ymin>64</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <object>
+    <bndbox>
+      <xmax>838</xmax>
+      <xmin>780</xmin>
+      <ymax>172</ymax>
+      <ymin>30</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <size>
+    <depth>3</depth>
+    <height>720</height>
+    <width>1280</width>
+  </size>
+</annotation>

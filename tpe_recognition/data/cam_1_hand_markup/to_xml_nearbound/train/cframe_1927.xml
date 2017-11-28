@@ -1,0 +1,33 @@
+<annotation>
+  <filename>cframe_1927.jpg</filename>
+  <folder>folder_1</folder>
+  <object>
+    <bndbox>
+      <xmax>558</xmax>
+      <xmin>450</xmin>
+      <ymax>690</ymax>
+      <ymin>589</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <object>
+    <bndbox>
+      <xmax>801</xmax>
+      <xmin>741</xmin>
+      <ymax>177</ymax>
+      <ymin>49</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <size>
+    <depth>3</depth>
+    <height>720</height>
+    <width>1280</width>
+  </size>
+</annotation>

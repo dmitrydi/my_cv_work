@@ -1,0 +1,33 @@
+<annotation>
+  <filename>cframe_164.jpg</filename>
+  <folder>folder_1</folder>
+  <object>
+    <bndbox>
+      <xmax>571</xmax>
+      <xmin>429</xmin>
+      <ymax>708</ymax>
+      <ymin>607</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <object>
+    <bndbox>
+      <xmax>452</xmax>
+      <xmin>320</xmin>
+      <ymax>615</ymax>
+      <ymin>467</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <size>
+    <depth>3</depth>
+    <height>720</height>
+    <width>1280</width>
+  </size>
+</annotation>

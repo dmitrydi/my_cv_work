@@ -1,0 +1,21 @@
+<annotation>
+  <filename>cframe_1944.jpg</filename>
+  <folder>folder_1</folder>
+  <object>
+    <bndbox>
+      <xmax>136</xmax>
+      <xmin>41</xmin>
+      <ymax>528</ymax>
+      <ymin>423</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <size>
+    <depth>3</depth>
+    <height>720</height>
+    <width>1280</width>
+  </size>
+</annotation>

@@ -1,0 +1,33 @@
+<annotation>
+  <filename>cframe_1822.jpg</filename>
+  <folder>folder_1</folder>
+  <object>
+    <bndbox>
+      <xmax>502</xmax>
+      <xmin>413</xmin>
+      <ymax>695</ymax>
+      <ymin>591</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <object>
+    <bndbox>
+      <xmax>621</xmax>
+      <xmin>511</xmin>
+      <ymax>720</ymax>
+      <ymin>651</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <size>
+    <depth>3</depth>
+    <height>720</height>
+    <width>1280</width>
+  </size>
+</annotation>

@@ -1,0 +1,33 @@
+<annotation>
+  <filename>cframe_1914.jpg</filename>
+  <folder>folder_1</folder>
+  <object>
+    <bndbox>
+      <xmax>298</xmax>
+      <xmin>204</xmin>
+      <ymax>504</ymax>
+      <ymin>364</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <object>
+    <bndbox>
+      <xmax>545</xmax>
+      <xmin>420</xmin>
+      <ymax>720</ymax>
+      <ymin>605</ymin>
+    </bndbox>
+    <difficult>0</difficult>
+    <name>person</name>
+    <pose>Left</pose>
+    <truncated>0</truncated>
+  </object>
+  <size>
+    <depth>3</depth>
+    <height>720</height>
+    <width>1280</width>
+  </size>
+</annotation>
