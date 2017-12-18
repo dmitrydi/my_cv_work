@@ -1,7 +1,7 @@
 # Класс для обучения классификатора на триплетах
-from tpe_model.tpe_model_builder import build_tpe
+from .tpe_model.tpe_model_builder import build_tpe
 from sklearn.decomposition import PCA
-from tpe_model.tpe_train import *
+from .tpe_model.tpe_train import *
 import numpy as np
 
 
@@ -59,7 +59,7 @@ class TPEPredictor(object):
 				pca = PCA(self.out_shape)
 				pca.fit(self.train_embs)
 				W_pca = pca.components_
-				self.model.set_weights([W_pca])
+				self.model.set_weights([W_pca.T])
 			else:
 				self.model.load_weights(weights)
 		# добавить опцию по созданию протокола
@@ -67,4 +67,4 @@ class TPEPredictor(object):
 		self.mineer, self.deer = train_tpe(self.model, self.predictor, self.train_embs, self.dev_embs,
     			self.dev_protocol, self.train_labels, self.nclasses, nepoch, batch_size, sampling_batch_size,
     			save_weights=save_weights, model_saving_path=weights_saving_path, model_saving_name = weights_saving_name)
-
+		return self.mineer, self.deer

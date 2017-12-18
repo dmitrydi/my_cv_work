@@ -225,6 +225,7 @@ def train_tpe(
 # относятся к одному классу, то dev_protocol[i,j] == 1, иначе - 0
 # labels - метки классов для x_embs
 # n_classes - кол-во классов
+# self.dev_protocol = make_protocol(self.dev_labels)
 # nepoch - кол-во эпох обучения
 # batch_size - размер батча
 # sampling_batch_size - количество экземпляров x_embs для поиска максимально сложных примеров при формировании батча. Введен для того,
@@ -243,6 +244,8 @@ def train_tpe(
 
     z = np.zeros((batch_size,))     # подаются на вход оптимизатора.
                                     #Условие "плотной границы" между положительными и негативными экземплярами a*p - a*n = 0
+    print('training tpe, number of train data {}, number of dev data {}, epochs {}'.format(x_embs.shape, x_embs_dev.shape, nepoch))
+    print('save_weights {}'.format(save_weights))
     mineer = 1.
     saving_name = os.path.join(model_saving_path, model_saving_name)
     nex = x_embs.shape[0]
@@ -261,12 +264,19 @@ def train_tpe(
         if eer < mineer:                                    # выбираем лучшую модель по параметру d (mindeer)
             mineer = eer
             mindeer = deer
-            best_weights = tpe_model.get_weights()
-        if save_weights:
+            best_weights = tpe_model.get_weights() 
+            saving_name = os.path.splitext(model_saving_name)[0]+'_best_'+str(_i)+os.path.splitext(model_saving_name)[1]
+            saving_name = os.path.join(model_saving_path, model_saving_name)
             tpe_model.save_weights(saving_name)
+        if save_weights:
+            saving_name = os.path.splitext(model_saving_name)[0]+'_'+str(_i)+os.path.splitext(model_saving_name)[1]
+            saving_name = os.path.join(model_saving_path, saving_name)
+            tpe_model.save_weights(saving_name)
+            print('weights {} saved'.format(saving_name))
         if set_best_weights:
             tpe_model.set_weights(best_weights)
-            
+
+    print('MINEER {}, MINDEER {}'.format(mineer, mindeer))           
     return mineer, mindeer
 
 def train_tpe_from_dirs(

@@ -1,6 +1,7 @@
 # Класс для дообучения детектора на основе Darkflow
 from darkflow.net.build import TFNet
 import cv2
+import skvideo.io
 from sort.sort import *
 import numpy as np
 
@@ -30,30 +31,29 @@ class Detector(object):
 		for file in os.listdir(video_file_path):
 			if verbose:
 				print('processing file: {}'.format(file))
-			camera = cv2.VideoCapture(os.path.join(video_file_path,file))
-			while(1):
-				ret, img_bgr = camera.read()
-
-				if not ret:
-					camera.release()
-					break
-
-				img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+			#camera = skvideo.io.VideoCapture(os.path.join(video_file_path,file))
+			frames = skvideo.io.FFmpegReader(os.path.join(video_file_path,file)).nextFrame()
+			for img in frames:
+				img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 				pred_dict = self.detector.return_predict(img)
 				detections = get_boxes_from_dict(pred_dict)
 				bboxes = tracker.update(detections)
 
 				for box_ in bboxes:
+					#print('strat processing boxes')
 					box = box_.astype(int)
 					person_id = box[4]
 					person_dir = os.path.join(img_saving_path, str(person_id))
 					
 					if not os.path.exists(person_dir):
 						os.mkdir(person_dir)
+						#print('preson dir made for id {}'.format(person_id))
 					
+
 					n_img = len(os.listdir(person_dir))
 					im_name = str(person_id) + '_' + str(n_img) + '.jpg'
 					imCrop = img_bgr[box[1]:box[3], box[0]:box[2]]
+					#imCrop = cv2.cvtColor(imCrop, cv2.COLOR_RGB2BGR)
 					
 					if n_img < max_imgs_per_person:
 						if save_mode == 'images' or save_mode == 'all':
@@ -72,19 +72,20 @@ class Detector(object):
 								embeddings = None
 								emb_arch_counter += 1
 
+
+				if show_video:
 					cv2.rectangle(img_bgr, (box[0], box[1]), (box[2], box[3]), (255,0,0), 1)
 					if show_ids:
 						cv2.putText(img_bgr, 'id:' +str(box[4]),(box[0],box[1]),cv2.FONT_HERSHEY_SIMPLEX, 2, (0,255,0))
-
-				if show_video:
 					cv2.imshow('ex', img_bgr)
 					k = cv2.waitKey(delay)
 					if k & 0xFF == ord('q'):
 						camera.release()
 						break
 
-			if k & 0xFF == ord('q'):
-				break
+			if show_video:
+				if k & 0xFF == ord('q'):
+					break
 
 		if show_video:
 			cv2.destroyAllWindows()
