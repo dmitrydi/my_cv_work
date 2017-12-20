@@ -1,4 +1,4 @@
-from rect_calc import IoU
+from .rect_calc import IoU
 import cv2
 import json
 import os
