@@ -27,4 +27,5 @@ facenet/
 tpe_recognition/bin/deep_sort/resources/**
 tpe_recognition/bin/tpe/deep_sort/resources/**
 verificator/**/*.pyc
+**/.pyc
 
